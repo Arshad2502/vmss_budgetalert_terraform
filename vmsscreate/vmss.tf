@@ -12,11 +12,13 @@ provider "azurerm" {
   features {}
 }
 
+# Resource Group
 resource "azurerm_resource_group" "main" {
   name     = "${var.prefix}-resources"
   location = var.location
 }
 
+# Virtual Network (depends on Resource Group implicitly)
 resource "azurerm_virtual_network" "main" {
   name                = "${var.prefix}-network"
   address_space       = ["10.0.0.0/16"]
@@ -24,6 +26,7 @@ resource "azurerm_virtual_network" "main" {
   resource_group_name = azurerm_resource_group.main.name
 }
 
+# Subnet (depends on VNet implicitly)
 resource "azurerm_subnet" "internal" {
   name                 = "internal"
   resource_group_name  = azurerm_resource_group.main.name
@@ -31,15 +34,15 @@ resource "azurerm_subnet" "internal" {
   address_prefixes     = ["10.0.2.0/24"]
 }
 
+# VM Scale Set (depends on Subnet implicitly via subnet_id)
 resource "azurerm_linux_virtual_machine_scale_set" "main" {
-  depends_on = [azurerm_subnet.internal]
   name                            = "${var.prefix}-vmss"
   resource_group_name             = azurerm_resource_group.main.name
   location                        = azurerm_resource_group.main.location
   sku                             = "Standard_D2s_v3"
-  instances                       = 3 
-  admin_username                  = var.admin_username 
-  admin_password                  = var.admin_password 
+  instances                       = 3
+  admin_username                  = var.admin_username
+  admin_password                  = var.admin_password
   disable_password_authentication = false
 
   source_image_reference {
@@ -65,13 +68,12 @@ resource "azurerm_linux_virtual_machine_scale_set" "main" {
     caching              = "ReadWrite"
   }
 
-  # Since these can change via auto-scaling outside of Terraform,
-  # let's ignore any changes to the number of instances
   lifecycle {
     ignore_changes = [instances]
   }
 }
 
+# Autoscale Setting (depends on VMSS implicitly via target_resource_id)
 resource "azurerm_monitor_autoscale_setting" "main" {
   name                = "autoscale-config"
   resource_group_name = azurerm_resource_group.main.name
