@@ -32,6 +32,7 @@ resource "azurerm_subnet" "internal" {
 }
 
 resource "azurerm_linux_virtual_machine_scale_set" "main" {
+  depends_on = [azurerm_subnet.internal]
   name                            = "${var.prefix}-vmss"
   resource_group_name             = azurerm_resource_group.main.name
   location                        = azurerm_resource_group.main.location
