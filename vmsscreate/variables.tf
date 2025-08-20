@@ -5,7 +5,7 @@ variable "prefix" {
 
 variable "location" {
   description = "The Azure Region in which all resources should be created."
-  default = "Australia East"
+  default = "West US 2"
 }
 
 variable "admin_password" {
