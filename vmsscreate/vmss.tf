@@ -52,7 +52,7 @@ resource "azurerm_linux_virtual_machine_scale_set" "main" {
   resource_group_name             = azurerm_resource_group.main.name
   location                        = azurerm_resource_group.main.location
   sku                             = "Standard_D2s_v3"
-  instances                       = 3
+  instances                       = 1
   admin_username                  = var.admin_username
   admin_password                  = var.admin_password
   disable_password_authentication = false
@@ -105,9 +105,9 @@ resource "azurerm_monitor_autoscale_setting" "main" {
     name = "AutoScale"
 
     capacity {
-      default = 3
+      default = 1
       minimum = 1
-      maximum = 5
+      maximum = 2
     }
 
     # Scale Out Rule (CPU > 75%)
