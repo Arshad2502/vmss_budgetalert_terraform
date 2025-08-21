@@ -12,15 +12,12 @@ provider "azurerm" {
   features {}
 }
 
+# Lookup existing Resource Group created by VMSS module
 data "azurerm_resource_group" "main" {
   name = "${var.prefix}-resources"
 }
 
-data "azurerm_linux_virtual_machine_scale_set" "main" {
-  name                = "${var.prefix}-vmss"
-  resource_group_name = data.azurerm_resource_group.main.name
-}
-
+# Action Group for Alerts
 resource "azurerm_monitor_action_group" "main" {
   name                = "${var.prefix}-action-group"
   resource_group_name = data.azurerm_resource_group.main.name
@@ -32,8 +29,9 @@ resource "azurerm_monitor_action_group" "main" {
   }
 }
 
+# Budget scoped to the Resource Group (all resources included)
 resource "azurerm_consumption_budget_resource_group" "main" {
-  name              = "${var.prefix}-vmss-budget"
+  name              = "${var.prefix}-budget"
   resource_group_id = data.azurerm_resource_group.main.id
 
   amount     = 5000
@@ -42,13 +40,6 @@ resource "azurerm_consumption_budget_resource_group" "main" {
   time_period {
     start_date = "2025-08-01T00:00:00Z"
     end_date   = "2025-12-31T00:00:00Z"
-  }
-
-  filter {
-    dimension {
-      name   = "ResourceId"
-      values = [data.azurerm_linux_virtual_machine_scale_set.main.id]
-    }
   }
 
   notification {
