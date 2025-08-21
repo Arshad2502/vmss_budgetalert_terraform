@@ -12,29 +12,41 @@ provider "azurerm" {
   features {}
 }
 
+# -------------------------
 # Resource Group
+# -------------------------
 resource "azurerm_resource_group" "main" {
   name     = "${var.prefix}-resources"
   location = var.location
 }
 
-# Virtual Network (depends on Resource Group implicitly)
+# -------------------------
+# Networking
+# -------------------------
 resource "azurerm_virtual_network" "main" {
   name                = "${var.prefix}-network"
   address_space       = ["10.0.0.0/16"]
   location            = azurerm_resource_group.main.location
   resource_group_name = azurerm_resource_group.main.name
+
+  timeouts {
+    create = "10m"
+    delete = "10m"
+  }
 }
 
-# Subnet (depends on VNet implicitly)
 resource "azurerm_subnet" "internal" {
   name                 = "internal"
   resource_group_name  = azurerm_resource_group.main.name
   virtual_network_name = azurerm_virtual_network.main.name
   address_prefixes     = ["10.0.2.0/24"]
+
+  depends_on = [azurerm_virtual_network.main]
 }
 
-# VM Scale Set (depends on Subnet implicitly via subnet_id)
+# -------------------------
+# Virtual Machine Scale Set
+# -------------------------
 resource "azurerm_linux_virtual_machine_scale_set" "main" {
   name                            = "${var.prefix}-vmss"
   resource_group_name             = azurerm_resource_group.main.name
@@ -71,9 +83,18 @@ resource "azurerm_linux_virtual_machine_scale_set" "main" {
   lifecycle {
     ignore_changes = [instances]
   }
+
+  timeouts {
+    create = "30m"
+    delete = "30m"
+  }
+
+  depends_on = [azurerm_subnet.internal]
 }
 
-# Autoscale Setting (depends on VMSS implicitly via target_resource_id)
+# -------------------------
+# Autoscale Setting
+# -------------------------
 resource "azurerm_monitor_autoscale_setting" "main" {
   name                = "autoscale-config"
   resource_group_name = azurerm_resource_group.main.name
@@ -89,6 +110,7 @@ resource "azurerm_monitor_autoscale_setting" "main" {
       maximum = 5
     }
 
+    # Scale Out Rule (CPU > 75%)
     rule {
       metric_trigger {
         metric_name        = "Percentage CPU"
@@ -109,6 +131,7 @@ resource "azurerm_monitor_autoscale_setting" "main" {
       }
     }
 
+    # Scale In Rule (CPU < 25%)
     rule {
       metric_trigger {
         metric_name        = "Percentage CPU"
@@ -129,4 +152,6 @@ resource "azurerm_monitor_autoscale_setting" "main" {
       }
     }
   }
+
+  depends_on = [azurerm_linux_virtual_machine_scale_set.main]
 }
