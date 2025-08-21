@@ -1,6 +1,14 @@
 pipeline {
     agent any
 
+    parameters {
+        booleanParam(
+            name: 'DESTROY_BUDGET_ALERT',
+            defaultValue: false,
+            description: 'Set to true to destroy the budget alert after deployment'
+        )
+    }
+
     environment {
         ARM_CLIENT_ID       = credentials('ARM_CLIENT_ID')
         ARM_CLIENT_SECRET   = credentials('ARM_CLIENT_SECRET')
@@ -44,6 +52,9 @@ pipeline {
         }
 
         stage('Destroy Budget Alert') {
+            when {
+                expression { return params.DESTROY_BUDGET_ALERT }
+            }
             steps {
                 dir('budgetalertvmss') {
                     sh 'terraform destroy -auto-approve'
